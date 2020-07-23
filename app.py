@@ -1,29 +1,24 @@
-from slackeventsapi import SlackEventAdapter
-from slackclient import SlackClient
 import os
-import json
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
+from dotenv import load_dotenv
 import random
+from setup_server import *
+from setup_spotify import *
+from setup_slack_adapter import *
 
-cid = 'd06605a0954e4edd9a373deba0c1676f'
-secret = 'c8d55b932dd942fba41c6ab23a1d344f'
+APP_ROOT = os.path.join(os.path.dirname(__file__), '..')
+dotenv_path = os.path.join(APP_ROOT, '.env')
+load_dotenv(dotenv_path)
 
-client_credentials_manager = SpotifyClientCredentials(
-    client_id=cid, client_secret=secret)
-sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+spotify_cid = os.getenv('SPOTIFY_CID')
+spotify_secret = os.getenv('SPOTIFY_SECRET')
+slack_bot_token = os.getenv('SLACK_BOT_TOKEN')
+slack_bot_secret = os.getenv('SLACK_BOT_SECRET')
 
+app = create_flask_app()
 
-tokens = {}
-with open('configs.json') as json_data:
-    tokens = json.load(json_data)
+sp = create_spotify_client(spotify_cid, spotify_secret)
 
-slack_events_adapter = SlackEventAdapter(
-    tokens.get("slack_signing_secret"), "/slack/events")
-slack_client = SlackClient(tokens.get("slack_bot_token"))
-
-# responds to an app mention
-
+slack_events_adapter, slack_client = create_slack_bot_adapter(slack_bot_token, slack_bot_secret, app)
 
 def randomSong():
     characters = 'abcdefghijklmnopqrstuvwxyz'
@@ -35,7 +30,7 @@ def randomSong():
     url = results['tracks']['items'][0]['external_urls']['spotify']
     return url
 
-
+# responds to an app mention
 @slack_events_adapter.on("app_mention")
 def handle_mention(event_data):
     message = event_data["event"]
@@ -47,8 +42,6 @@ def handle_mention(event_data):
                           channel=channel, text=send_message)
 
 # responds to a message that contains recommend
-
-
 @slack_events_adapter.on("message")
 def handle_message(event_data):
     message = event_data["event"]
@@ -65,4 +58,6 @@ def error_handler(err):
     print("ERROR: " + str(err))
 
 
-slack_events_adapter.start(port=int(os.environ.get('PORT', 3000)))
+# Start the server on port 3000
+if __name__ == "__main__":
+  app.run(port=int(os.getenv('PORT', 3000)))
