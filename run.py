@@ -31,15 +31,17 @@ def randomSong():
 
     randSearch = '%' + randChar + '%'
     results = sp.search(q=randSearch, type='track', limit=1, offset=1)
-    url = results['tracks']['items']
-    print(url)
+    url = results['tracks']['items'][0]['external_urls']['spotify']
+    return url
 
 
 @slack_events_adapter.on("app_mention")
 def handle_mention(event_data):
     message = event_data["event"]
     channel = message["channel"]
-    send_message = "https://open.spotify.com/track/3EuSjRC1jKGe6h3Nc9haWn?si=hCxSFkrYQ0KJ77rg7oQROQ"
+    song = randomSong()
+    send_message = song
+    # "https://open.spotify.com/track/3EuSjRC1jKGe6h3Nc9haWn?si=hCxSFkrYQ0KJ77rg7oQROQ"
     slack_client.api_call("chat.postMessage",
                           channel=channel, text=send_message)
 
@@ -50,9 +52,9 @@ def handle_mention(event_data):
 def handle_message(event_data):
     message = event_data["event"]
     if message.get("subtype") is None and "recommend" in message.get('text'):
-        randomSong()
+        song = randomSong()
         channel = message["channel"]
-        send_message = "REC"
+        send_message = "here's my recommendation: " + song
         slack_client.api_call("chat.postMessage",
                               channel=channel, text=send_message)
 
