@@ -1,5 +1,6 @@
 from slackeventsapi import SlackEventAdapter
 from slackclient import SlackClient
+import os
 import json
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -64,4 +65,4 @@ def error_handler(err):
     print("ERROR: " + str(err))
 
 
-slack_events_adapter.start(port=3000)
+slack_events_adapter.start(port=int(os.environ.get('PORT', 3000)))
