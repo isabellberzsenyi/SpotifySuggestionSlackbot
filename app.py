@@ -5,6 +5,7 @@ import random
 from setup_server import *
 from setup_spotify import *
 from setup_slack_adapter import *
+from flask import Flask, request, Response, jsonify
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -35,6 +36,23 @@ def randomSong():
 # Simple helper function to parse the message
 def getMrkdwnURL(song):
     return "<"+song+"|Hummm...How about this?>"
+
+@app.route('/hum', methods=['POST'])
+def hum():
+    search = request.form['text']
+    result = sp.search(q=search, type='track', limit=1, offset=1)
+    url = result['tracks']['items'][0]['external_urls']['spotify']
+    response = slack_client.api_call(
+        "chat.postMessage",
+        channel=request.form['channel_id'],
+        text=url,
+        username='pythonbot',
+        icon_emoji=':robot_face:'
+    )
+    return(render_message(response['message']['text']))
+
+def render_message(message):
+    return jsonify({"response_type": "in_channel", "text": f"{message}"})
 
 # responds to an app mention
 @slack_events_adapter.on("app_mention")
