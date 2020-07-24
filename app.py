@@ -1,4 +1,5 @@
 import os
+import json
 from dotenv import load_dotenv
 import random
 from setup_server import *
@@ -17,7 +18,9 @@ app = create_flask_app()
 
 sp = create_spotify_client(spotify_cid, spotify_secret)
 
-slack_events_adapter, slack_client = create_slack_bot_adapter(slack_bot_token, slack_bot_secret, app)
+slack_events_adapter, slack_client = create_slack_bot_adapter(
+    slack_bot_token, slack_bot_secret, app)
+
 
 def randomSong():
     characters = 'abcdefghijklmnopqrstuvwxyz'
@@ -29,16 +32,24 @@ def randomSong():
     url = results['tracks']['items'][0]['external_urls']['spotify']
     return url
 
+# Simple helper function to parse the message
+def getMrkdwnURL(song):
+    return "<"+song+"|Hummm...How about this?>"
+
 # responds to an app mention
 @slack_events_adapter.on("app_mention")
 def handle_mention(event_data):
     message = event_data["event"]
     channel = message["channel"]
     song = randomSong()
-    send_message = song
-    # "https://open.spotify.com/track/3EuSjRC1jKGe6h3Nc9haWn?si=hCxSFkrYQ0KJ77rg7oQROQ"
-    slack_client.api_call("chat.postMessage",
-                          channel=channel, text=send_message)
+    song_url_mrkdwn = getMrkdwnURL(song)
+    slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            unfurl_links=True,
+            text=song_url_mrkdwn,
+            mrkdwn=True,
+    )
 
 # responds to a message that contains recommend
 @slack_events_adapter.on("message")
@@ -47,16 +58,21 @@ def handle_message(event_data):
     if message.get("subtype") is None and "recommend" in message.get('text'):
         song = randomSong()
         channel = message["channel"]
-        send_message = "here's my recommendation: " + song
-        slack_client.api_call("chat.postMessage",
-                              channel=channel, text=send_message)
+        song_url_mrkdwn = getMrkdwnURL(song)
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            unfurl_links=True,
+            text=song_url_mrkdwn,
+            mrkdwn=True,
+        )
 
 
-@slack_events_adapter.on("error")
+@ slack_events_adapter.on("error")
 def error_handler(err):
     print("ERROR: " + str(err))
 
 
 # Start the server on port 3000
 if __name__ == "__main__":
-  app.run(port=int(os.getenv('PORT', 3000)))
+    app.run(port=int(os.getenv('PORT', 3000)))
