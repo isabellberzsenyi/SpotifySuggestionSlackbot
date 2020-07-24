@@ -22,30 +22,76 @@ app = create_flask_app()
 
 sp = create_spotify_client(spotify_cid, spotify_secret)
 
+# Useful strings for generating query keys
+base_chars = '0123456789abcdefghijklmnopqrstuvwxyz'
+rus_chars = 'абвгдеёжзийклмнопрстуфхцчшыьюя'
+fr_chars = 'àâéèëêïîôùûüÿçœæ'
+lang_options = ['AD', 'AE', 'AL', 'AR', 'AT', 'AU', 'BA', 'BE', 'BG', 'BH', 
+                'BO', 'BR', 'BY', 'CA', 'CH', 'CL', 'CO', 'CR', 'CY', 'CZ', 
+                'DE', 'DK', 'DO', 'DZ', 'EC', 'EE', 'EG', 'ES', 'FI', 'FR', 
+                'GB', 'GR', 'GT', 'HK', 'HN', 'HR', 'HU', 'ID', 'IE', 'IL', 
+                'IN', 'IS', 'IT', 'JO', 'JP', 'KW', 'KZ', 'LB', 'LI', 'LT', 
+                'LU', 'LV', 'MA', 'MC', 'MD', 'ME', 'MK', 'MT', 'MX', 'MY', 
+                'NI', 'NL', 'NO', 'NZ', 'OM', 'PA', 'PE', 'PH', 'PL', 'PS', 
+                'PT', 'PY', 'QA', 'RO', 'RS', 'RU', 'SA', 'SE', 'SG', 'SI', 
+                'SK', 'SV', 'TH', 'TN', 'TR', 'TW', 'UA', 'US', 'UY', 'VN', 
+                'XK', 'ZA']
+
 slack_events_adapter, slack_client = create_slack_bot_adapter(
     slack_bot_token, slack_bot_secret, app)
 
-
 def randomSong(genre=''):
-    characters = 'abcdefghijklmnopqrstuvwxyz'
-    randNum = random.randint(0, 25)
-    randChar = characters[randNum]
+    randNum = random.randint(0, len(base_chars)-1)
+    randChar = base_chars[randNum]
     randSearch = '%' + randChar + '%'
-
+    lang_idx = random.randint(0, len(lang_options)-1)
+    lang = lang_options[lang_idx]
     if genre:
         genre_words = genre.split()
         randSearch += ' genre:' + ' '.join(genre_words)
 
-    track_results = sp.search(q=randSearch, type='track', limit=50)
+    track_results = sp.search(q=randSearch, type='track', market=lang, limit=50)
     if int(track_results['tracks']['total']) > 0:
         item = random.choice(track_results['tracks']['items'])
         track_url = item['external_urls']['spotify']
     else:
         track_results = sp.search(
+            q='%' + randChar + '%', type='track', market=lang, limit=50)
+        item = random.choice(track_results['tracks']['items'])
+        track_url = track_results['tracks']['items'][0]['external_urls']['spotify']
+    return track_url
+
+def inDepthRandom():
+    lang, search_key = getRandMarketAndString()
+    track_results = sp.search(q=search_key, type='track', market=lang, limit=50)
+    if int(track_results['tracks']['total']) > 0:
+        item = random.choice(track_results['tracks']['items'])
+        track_url = item['external_urls']['spotify']
+    else:
+        randChar = base_chars[random.randint(0, len(base_chars)-1)]
+        track_results = sp.search(
             q='%' + randChar + '%', type='track', limit=50)
         item = random.choice(track_results['tracks']['items'])
         track_url = track_results['tracks']['items'][0]['external_urls']['spotify']
     return track_url
+
+    
+def getRandMarketAndString():
+    lang_idx = random.randint(0, len(lang_options)-1)
+    lang = lang_options[lang_idx]
+    if lang == 'RU':
+        rand_idx_base = random.randint(0, len(base_chars)-1)
+        rand_idx_ru = random.randint(0, len(rus_chars)-1)
+        search_key = rus_chars[rand_idx_ru] + ' OR ' + base_chars[rand_idx_base]
+    elif lang == 'FR':
+        rand_idx_base = random.randint(0, len(base_chars)-1)
+        rand_idx_fr = random.randint(0, len(fr_chars)-1)
+        search_key = rus_chars[rand_idx_fr] + ' OR ' + base_chars[rand_idx_base]
+    else:
+        rand_idx_base_one = random.randint(0, len(base_chars)-1)
+        rand_idx_base_two = random.randint(0, len(base_chars)-1)
+        search_key = base_chars[rand_idx_base_one] + ' OR ' + base_chars[rand_idx_base_two]
+    return lang, search_key
 
 # Simple helper function to parse the message
 
@@ -87,8 +133,7 @@ def hum():
 def handle_mention(event_data):
     message = event_data["event"]
     channel = message["channel"]
-    song = randomSong()
-
+    song = inDepthRandom()
     song_url_mrkdwn = getMrkdwnURL(song)
     slack_client.api_call(
         "chat.postMessage",
@@ -105,7 +150,7 @@ def handle_mention(event_data):
 def handle_message(event_data):
     message = event_data["event"]
     if message.get("subtype") is None and "recommend" in message.get('text'):
-        song = randomSong()
+        song = inDepthRandom()
         channel = message["channel"]
         song_url_mrkdwn = getMrkdwnURL(song)
         slack_client.api_call(
