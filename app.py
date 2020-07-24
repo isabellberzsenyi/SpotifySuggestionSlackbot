@@ -36,9 +36,7 @@ def randomSong(genre=''):
         genre_words = genre.split()
         randSearch += ' genre:' + ' '.join(genre_words)
 
-    print(randSearch)
     track_results = sp.search(q=randSearch, type='track', limit=50)
-    print(track_results)
     if int(track_results['tracks']['total']) > 0:
         item = random.choice(track_results['tracks']['items'])
         track_url = item['external_urls']['spotify']
@@ -192,7 +190,6 @@ def genre_resp():
         mrkdwn=True,
         attachments=[]
     )
-    print(selection)
     return make_response("", 200)
 
 
