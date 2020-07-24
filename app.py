@@ -108,14 +108,14 @@ def handle_message(event_data):
     if message.get("subtype") is None and "recommend" in message.get('text'):
         song = randomSong()
         channel = message["channel"]
-    song_url_mrkdwn = getMrkdwnURL(song)
-    slack_client.api_call(
-        "chat.postMessage",
-        channel=channel,
-        unfurl_links=True,
-        text=song_url_mrkdwn,
-        mrkdwn=True,
-    )
+        song_url_mrkdwn = getMrkdwnURL(song)
+        slack_client.api_call(
+            "chat.postMessage",
+            channel=channel,
+            unfurl_links=True,
+            text=song_url_mrkdwn,
+            mrkdwn=True,
+        )
 
 
 @ slack_events_adapter.on("error")
