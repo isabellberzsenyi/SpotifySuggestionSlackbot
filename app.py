@@ -5,6 +5,9 @@ import random
 from setup_server import *
 from setup_spotify import *
 from setup_slack_adapter import *
+from flask import Flask, request, Response, jsonify
+import logging
+import random
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path)
@@ -22,19 +25,54 @@ slack_events_adapter, slack_client = create_slack_bot_adapter(
     slack_bot_token, slack_bot_secret, app)
 
 
-def randomSong():
+def randomSong(genre=''):
     characters = 'abcdefghijklmnopqrstuvwxyz'
     randNum = random.randint(0, 25)
     randChar = characters[randNum]
-
     randSearch = '%' + randChar + '%'
-    results = sp.search(q=randSearch, type='track', limit=1, offset=1)
-    url = results['tracks']['items'][0]['external_urls']['spotify']
-    return url
+
+    if genre:
+        genre_words = genre.split()
+        randSearch += ' genre:' + ' '.join(genre_words)
+
+    print(randSearch)
+    track_results = sp.search(q=randSearch, type='track', limit=50)
+    print(track_results)
+    if int(track_results['tracks']['total']) > 0:
+        item = random.choice(track_results['tracks']['items'])
+        track_url = item['external_urls']['spotify']
+    else:
+        track_results = sp.search(q='%' + randChar + '%', type='track', limit=50)
+        item = random.choice(track_results['tracks']['items'])
+        track_url = track_results['tracks']['items'][0]['external_urls']['spotify']
+    return track_url
 
 # Simple helper function to parse the message
 def getMrkdwnURL(song):
-    return "<"+song+"|Hummm...How about this?>"
+    if song:
+        return "<"+song+"|Hummm...How about this?>"
+    else:
+        None
+
+@app.route('/hum', methods=['POST'])
+def hum():
+    search = request.form['text']
+    if search:
+        song = randomSong(search)
+    else:
+        song = randomSong()
+    song = getMrkdwnURL(song)
+    response = slack_client.api_call(
+        "chat.postMessage",
+        channel=request.form['channel_id'],
+        text=song,
+        username='pythonbot',
+        icon_emoji=':robot_face:'
+    )
+    return(render_message(response['message']['text']))
+
+def render_message(message):
+    return jsonify({"response_type": "in_channel", "text": f"{message}"})
 
 # responds to an app mention
 @slack_events_adapter.on("app_mention")
@@ -71,7 +109,6 @@ def handle_message(event_data):
 @ slack_events_adapter.on("error")
 def error_handler(err):
     print("ERROR: " + str(err))
-
 
 # Start the server on port 3000
 if __name__ == "__main__":
