@@ -74,11 +74,12 @@ def hum():
         username='pythonbot',
         icon_emoji=':robot_face:'
     )
-    return(render_message(response['message']['text']))
+    return make_response("", 200)
+    # return(render_message(response['message']['text']))
 
 
-def render_message(message):
-    return jsonify({"response_type": "in_channel", "text": f"{message}"})
+# def render_message(message):
+#     return jsonify({"response_type": "in_channel", "text": f"{message}"})
 
 
 # responds to an app mention
@@ -171,12 +172,7 @@ def genre():
             ]
         )
     )
-    # return(render_block(response['message']['text'], response['message']['attachments']))
     return make_response("", 200)
-
-
-# def render_block(message, block):
-#     return jsonify({"response_type": "in_channel", "text": f"{message}", "attachments": f"{block}"})
 
 
 @app.route('/genre_resp', methods=['POST'])
@@ -187,11 +183,13 @@ def genre_resp():
     text, value = showGenres()
 
     url = getRec(selection)
-    message = "here ya go: " + url
+    song_url_mrkdwn = getMrkdwnURL(url)
     slack_client.api_call(
         "chat.postMessage",
         channel=form_json["channel"]["id"],
-        text=message,
+        unfurl_links=True,
+        text=song_url_mrkdwn,
+        mrkdwn=True,
         attachments=[]
     )
     print(selection)
