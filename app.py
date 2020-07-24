@@ -171,11 +171,12 @@ def genre():
             ]
         )
     )
-    return(render_block(response['message']['text'], response['message']['attachments']))
+    # return(render_block(response['message']['text'], response['message']['attachments']))
+    return make_response("", 200)
 
 
-def render_block(message, block):
-    return jsonify({"response_type": "in_channel", "text": f"{message}", "attachments": f"{block}"})
+# def render_block(message, block):
+#     return jsonify({"response_type": "in_channel", "text": f"{message}", "attachments": f"{block}"})
 
 
 @app.route('/genre_resp', methods=['POST'])
