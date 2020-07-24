@@ -115,6 +115,7 @@ def handle_message(event_data):
             text=song_url_mrkdwn,
             mrkdwn=True,
         )
+    return make_response("", 200)
 
 
 @ slack_events_adapter.on("error")
